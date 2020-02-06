@@ -6,138 +6,150 @@ import wx.grid
 import PyPDF2
 from unicodedata import normalize
 import pandas as pd
+import re
 
-class MainFrame ( wx.Frame ):
+class MainFrame (wx.Frame):
+
+    emptyWord = ["del", '', 'al', 'mi', 'me','de', 'la', 'le', 'a', 'una', 'une', 'u']
+    emptyWord += ['y', 'mis', 'que', 'en', 'sino','no', 'sus', 'ya', 'él', 'su', 'sí']
+    emptyWord += ['allí', 'así', 'con', 'e', 'es','las', 'los', 'o', 'por', 'se', 'un']
+    emptyWord += ['el', 'lo', 'nos', 'como', ' ','para','esos']
+
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=wx.EmptyString, pos=wx.DefaultPosition, size=wx.Size(
+            600, 300), style=wx.DEFAULT_FRAME_STYLE | wx.TAB_TRAVERSAL)
+        self.__iniComponents()
+
+    def __iniComponents(self):
+        Container = wx.GridSizer(1, 2, 0, 0)
+
+        self.dataView = wx.grid.Grid(
+            self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0)
+
+        # Grid
+        self.dataView.CreateGrid(0, 2)
+        self.dataView.EnableEditing(False)
+        self.dataView.EnableGridLines(True)
+        self.dataView.EnableDragGridSize(False)
+        self.dataView.SetMargins(0, 0)
+
+        # Columns
+        self.dataView.EnableDragColMove(False)
+        self.dataView.EnableDragColSize(True)
+        self.dataView.SetColLabelSize(30)
+        self.dataView.SetColLabelAlignment(wx.ALIGN_CENTRE, wx.ALIGN_CENTRE)
+        self.dataView.SetColLabelValue(0, "Palabra")
+        self.dataView.SetColLabelValue(1, "Cantidad")
+
+        # Rows
+        self.dataView.EnableDragRowSize(False)
+        self.dataView.SetRowLabelSize(80)
+        self.dataView.SetRowLabelAlignment(wx.ALIGN_CENTRE, wx.ALIGN_CENTRE)
+
+        # Label Appearance
+
+        # Cell Defaults
+        self.dataView.SetDefaultCellAlignment(wx.ALIGN_LEFT, wx.ALIGN_TOP)
+        Container.Add(self.dataView, 1, wx.ALL | wx.EXPAND, 5)
+
+        ContainerRight = wx.BoxSizer(wx.VERTICAL)
+
+        self.lblTitle = wx.StaticText(
+            self, wx.ID_ANY, u"WordCount", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.lblTitle.Wrap(-1)
+        ContainerRight.Add(self.lblTitle, 0, wx.ALL |
+                           wx.ALIGN_CENTER_HORIZONTAL, 5)
+
+        self.lblFilePiker = wx.StaticText(
+            self, wx.ID_ANY, u"Seleccione el archivo", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.lblFilePiker.Wrap(-1)
+        ContainerRight.Add(self.lblFilePiker, 0, wx.ALL, 5)
+
+        self.filePiker = wx.FilePickerCtrl(self, wx.ID_ANY, wx.EmptyString, u"Seleccione el archivo",
+                                           u"*.pdf", wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE)
+        ContainerRight.Add(self.filePiker, 0, wx.ALL | wx.EXPAND, 5)
+
+        self.carguer = wx.Gauge(
+            self, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL)
+        self.carguer.SetValue(0)
+        ContainerRight.Add(self.carguer, 0, wx.ALL, 5)
+
+        ##ContainerRight.AddSpacer( ( 0, 40), 0, wx.EXPAND, 5 )
+
+        self.btnStart = wx.Button(
+            self, wx.ID_ANY, u"Contar", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.btnStart.Enable(False)
+
+        ContainerRight.Add(
+            self.btnStart, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5)
+
+        #ContainerRight.AddSpacer( ( 0, 10), 0, wx.EXPAND, 5 )
+
+        self.btnImport = wx.Button(
+            self, wx.ID_ANY, u"Importar", wx.DefaultPosition, wx.DefaultSize, 0)
+        self.btnImport.Enable(False)
+
+        ContainerRight.Add(self.btnImport, 0, wx.ALL |
+                           wx.ALIGN_CENTER_HORIZONTAL, 5)
+
+        Container.Add(ContainerRight, 1, wx.EXPAND, 5)
+
+        self.SetSizer(Container)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        # Connect Events
+        self.filePiker.Bind(wx.EVT_FILEPICKER_CHANGED, self.__enableButton)
+        self.btnStart.Bind(wx.EVT_BUTTON, self.__countWords)
+
+    def __enableButton(self, event):
+        self.btnStart.Enabled = True 
+
+    def __countWords(self, event):
+        pdf = self.__getFile(self.filePiker.GetPath())
+        words =[]
+
+        self.carguer.SetRange(pdf.getNumPages())
+        for num in range(pdf.getNumPages()):
+            self.carguer.SetValue(num)
+            page    =   pdf.getPage(num)
+            txt     =   self.normalizeText(page.extractText())
+            words   +=  self.deleteEmptyWords(txt)
+        
+        frecuency = [words.count(p) for p in words]
+        dictionary = dict(list(zip(words,frecuency)))
+        dictionary = self.sortDictionary(dictionary)
+
+        for i,value in enumerate(dictionary):
+            self.dataView.InsertRows(pos=i)
+            self.dataView.SetCellValue(i,0,value[1])
+            self.dataView.SetCellValue(i,1,str(value[0]))
+        self.carguer.SetValue(num+1)
 	
-	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = wx.EmptyString, pos = wx.DefaultPosition, size = wx.Size( 600,300 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
-		self.__iniComponents()
-
-	def __iniComponents(self):	
-		Container = wx.GridSizer( 1, 2, 0, 0 )
-		
-		self.dataView = wx.grid.Grid( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0 )
-		
-		# Grid
-		self.dataView.CreateGrid( 0, 2 )
-		self.dataView.EnableEditing( False )
-		self.dataView.EnableGridLines( True )
-		self.dataView.EnableDragGridSize( False )
-		self.dataView.SetMargins( 0, 0 )
-		
-		# Columns
-		self.dataView.EnableDragColMove( False )
-		self.dataView.EnableDragColSize( True )
-		self.dataView.SetColLabelSize( 30 )
-		self.dataView.SetColLabelAlignment( wx.ALIGN_CENTRE, wx.ALIGN_CENTRE )
-		self.dataView.SetColLabelValue(0,"Palabra")
-		self.dataView.SetColLabelValue(1,"Cantidad")
-		
-		# Rows
-		self.dataView.EnableDragRowSize( False )
-		self.dataView.SetRowLabelSize( 80 )
-		self.dataView.SetRowLabelAlignment( wx.ALIGN_CENTRE, wx.ALIGN_CENTRE )
-		
-		# Label Appearance
-		
-		# Cell Defaults
-		self.dataView.SetDefaultCellAlignment( wx.ALIGN_LEFT, wx.ALIGN_TOP )
-		Container.Add( self.dataView, 1, wx.ALL|wx.EXPAND, 5 )
-		
-		ContainerRight = wx.BoxSizer( wx.VERTICAL )
+    def normalizeText(self,txt):
+        return re.compile(r'\W+', re.UNICODE).split(txt)
+    
+    def deleteEmptyWords(self,txt):
+        return [w for w in txt if w not in self.emptyWord]
+    
+    def sortDictionary(self,dictionary):
+        aux = [(dictionary[key], key) for key in dictionary]
+        aux.sort()
+        aux.reverse()
+        return aux
 
 
-		
-		self.lblTitle = wx.StaticText( self, wx.ID_ANY, u"WordCount", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.lblTitle.Wrap( -1 )
-		ContainerRight.Add( self.lblTitle, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
-		
-		self.lblFilePiker = wx.StaticText( self, wx.ID_ANY, u"Seleccione el archivo", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.lblFilePiker.Wrap( -1 )
-		ContainerRight.Add( self.lblFilePiker, 0, wx.ALL, 5 )
-		
-		self.filePiker = wx.FilePickerCtrl( self, wx.ID_ANY, wx.EmptyString, u"Seleccione el archivo", u"*.pdf", wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE )
-		ContainerRight.Add( self.filePiker, 0, wx.ALL|wx.EXPAND, 5 )
-		
-		
-		self.carguer = wx.Gauge( self, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL )
-		self.carguer.SetValue( 0 ) 
-		ContainerRight.Add( self.carguer, 0, wx.ALL, 5 )
+    def __getFile(self, path):
+        try:
+            binaryPDF = open(path, 'rb')  # 'rb' for read binary mode
+            return PyPDF2.PdfFileReader(binaryPDF)
+        except IOError as error:
+            return None
 
-		##ContainerRight.AddSpacer( ( 0, 40), 0, wx.EXPAND, 5 )
-		
-		self.btnStart = wx.Button( self, wx.ID_ANY, u"Contar", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.btnStart.Enable( False )
-		
-		ContainerRight.Add( self.btnStart, 0, wx.ALIGN_CENTER_HORIZONTAL|wx.ALL, 5 )
-		
-		
-		#ContainerRight.AddSpacer( ( 0, 10), 0, wx.EXPAND, 5 )
-		
-		self.btnImport = wx.Button( self, wx.ID_ANY, u"Importar", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.btnImport.Enable( False )
-		
-		ContainerRight.Add( self.btnImport, 0, wx.ALL|wx.ALIGN_CENTER_HORIZONTAL, 5 )
-		
-		
-		Container.Add( ContainerRight, 1, wx.EXPAND, 5 )
-		
-		
-		self.SetSizer( Container )
-		self.Layout()
-		
-		self.Centre( wx.BOTH )
+    def __del__(self):
+        pass
 
-		# Connect Events
-		self.filePiker.Bind( wx.EVT_FILEPICKER_CHANGED, self.__enableButton )
-		self.btnStart.Bind(wx.EVT_BUTTON, self.__countWords)
-	
-	def __enableButton(self,event):
-		self.btnStart.Enabled = True
-		
-	def __countWords(self, event):
-		pdf = self.__getFile( self.filePiker.GetPath())
-		banChar = ['¡','¿','?','(',')',',',':',';','.','"',"'",'*','!','“','”','\n','-','_',"•","/","1","2","3","4","5","6","7","8","9","0"]
-		
-		if(pdf is not None):
-			words = {}
-			for i in range(pdf.getNumPages()):
-				page = pdf.getPage(i)
-				clearText = ''
-				for char in page.extractText().lower():
-					if char in banChar:
-						char = ''
-					clearText += char
-				
-
-				for word in clearText.split(" "):
-					if(word in ["del",'','al','mi','me','de','la','le','a','una','une','u','y','mis','que','en','sino','no','sus','ya','él','su','sí','allí','así','con','e','es','las','los','o','por','se','un','el','lo','nos','como',' ']):
-						continue
-
-					if(word in words):
-						words[word] += 1
-						continue
-					words.update({word:1})
-
-			total = len(words.keys())
-			self.carguer.SetRange(total)
-			for i,key in enumerate(words):
-				self.dataView.InsertRows(pos=i)
-				self.dataView.SetCellValue(i,0,str(key))
-				self.dataView.SetCellValue(i,1,str(words[key]))
-				self.carguer.SetValue(i)			
-	
-	def __getFile(self,path):
-		try:
-			binaryPDF = open(path,'rb')     #'rb' for read binary mode
-			return PyPDF2.PdfFileReader(binaryPDF)
-		except IOError as error:
-			return None
-
-
-	def __del__( self ):
-		pass
-	
 
 app = wx.App()
 frame = MainFrame(None)
