@@ -120,8 +120,10 @@ class MainFrame (wx.Frame):
     def __resetCarguer(self,max):
         self.carguer.SetValue(0)
         self.carguer.SetRange(max)
+    
 
     def __countWords(self, event):
+        self.dataView.ClearGrid()
         pdf = self.__getFile(self.filePiker.GetPath())
         words =[]
 
