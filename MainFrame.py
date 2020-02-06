@@ -1,11 +1,9 @@
-import codecs
-import binascii
 import wx
+import csv
 import wx.xrc
 import wx.grid
 import PyPDF2
 from unicodedata import normalize
-import pandas as pd
 import re
 
 class MainFrame (wx.Frame):
@@ -14,6 +12,8 @@ class MainFrame (wx.Frame):
     emptyWord += ['y', 'mis', 'que', 'en', 'sino','no', 'sus', 'ya', 'él', 'su', 'sí']
     emptyWord += ['allí', 'así', 'con', 'e', 'es','las', 'los', 'o', 'por', 'se', 'un']
     emptyWord += ['el', 'lo', 'nos', 'como', ' ','para','esos']
+
+    filePath = "./import/"
 
     def __init__(self, parent):
         wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=wx.EmptyString, pos=wx.DefaultPosition, size=wx.Size(
@@ -103,8 +103,23 @@ class MainFrame (wx.Frame):
         self.filePiker.Bind(wx.EVT_FILEPICKER_CHANGED, self.__enableButton)
         self.btnStart.Bind(wx.EVT_BUTTON, self.__countWords)
 
+        self.btnImport.Bind(wx.EVT_BUTTON, self.__importData)
+
     def __enableButton(self, event):
         self.btnStart.Enabled = True 
+
+    def __importData(self,event):
+        self.__resetCarguer(len(self.dictionary))
+        with open(self.filePath+'words.csv', 'w', newline='') as csvfile:
+            spamwriter = csv.writer(csvfile, delimiter=';',
+                                    quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            for i,value in enumerate(self.dictionary):
+                self.carguer.SetValue(i)
+                spamwriter.writerow([value[0],value[1]])
+
+    def __resetCarguer(self,max):
+        self.carguer.SetValue(0)
+        self.carguer.SetRange(max)
 
     def __countWords(self, event):
         pdf = self.__getFile(self.filePiker.GetPath())
@@ -118,14 +133,15 @@ class MainFrame (wx.Frame):
             words   +=  self.deleteEmptyWords(txt)
         
         frecuency = [words.count(p) for p in words]
-        dictionary = dict(list(zip(words,frecuency)))
-        dictionary = self.sortDictionary(dictionary)
+        self.dictionary = dict(list(zip(words,frecuency)))
+        self.dictionary = self.sortDictionary(self.dictionary)
 
-        for i,value in enumerate(dictionary):
+        for i,value in enumerate(self.dictionary):
             self.dataView.InsertRows(pos=i)
             self.dataView.SetCellValue(i,0,value[1])
             self.dataView.SetCellValue(i,1,str(value[0]))
         self.carguer.SetValue(num+1)
+        self.btnImport.Enable(True)
 	
     def normalizeText(self,txt):
         return re.compile(r'\W+', re.UNICODE).split(txt)
