@@ -3,7 +3,6 @@ import csv
 import wx.xrc
 import wx.grid
 import PyPDF2
-from unicodedata import normalize
 import re
 
 class MainFrame (wx.Frame):
