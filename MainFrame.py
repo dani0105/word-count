@@ -4,6 +4,7 @@ import wx.xrc
 import wx.grid
 import PyPDF2
 import re
+from collections import Counter
 
 class MainFrame (wx.Frame):
 
@@ -144,8 +145,7 @@ class MainFrame (wx.Frame):
             txt     =   self.normalizeText(page.extractText())
             words   +=  self.deleteEmptyWords(txt)
         
-        frecuency = [words.count(p) for p in words]
-        self.dictionary = dict(list(zip(words,frecuency)))
+        self.dictionary = dict(Counter(words))
         self.dictionary = self.sortDictionary(self.dictionary)
 
         for i,value in enumerate(self.dictionary):
