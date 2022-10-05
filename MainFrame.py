@@ -8,6 +8,7 @@ import re
 
 class MainFrame (wx.Frame):
 
+    # Ignore this word from the text.
     emptyWord = ["del", '', 'al', 'mi', 'me','de', 'la', 'le', 'a', 'una', 'une', 'u']
     emptyWord += ['y', 'mis', 'que', 'en', 'sino','no', 'sus', 'ya', 'él', 'su', 'sí']
     emptyWord += ['allí', 'así', 'con', 'e', 'es','las', 'los', 'o', 'por', 'se', 'un']
@@ -21,6 +22,9 @@ class MainFrame (wx.Frame):
         self.__iniComponents()
 
     def __iniComponents(self):
+        """
+        Create UI
+        """
         Container = wx.GridSizer(1, 2, 0, 0)
 
         self.dataView = wx.grid.Grid(
@@ -46,8 +50,6 @@ class MainFrame (wx.Frame):
         self.dataView.SetRowLabelSize(80)
         self.dataView.SetRowLabelAlignment(wx.ALIGN_CENTRE, wx.ALIGN_CENTRE)
 
-        # Label Appearance
-
         # Cell Defaults
         self.dataView.SetDefaultCellAlignment(wx.ALIGN_LEFT, wx.ALIGN_TOP)
         Container.Add(self.dataView, 1, wx.ALL | wx.EXPAND, 5)
@@ -69,10 +71,10 @@ class MainFrame (wx.Frame):
                                            u"*.pdf", wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE)
         ContainerRight.Add(self.filePiker, 0, wx.ALL | wx.EXPAND, 5)
 
-        self.carguer = wx.Gauge(
+        self.gauge = wx.Gauge(
             self, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL)
-        self.carguer.SetValue(0)
-        ContainerRight.Add(self.carguer, 0, wx.ALL, 5)
+        self.gauge.SetValue(0)
+        ContainerRight.Add(self.gauge, 0, wx.ALL, 5)
 
         ##ContainerRight.AddSpacer( ( 0, 40), 0, wx.EXPAND, 5 )
 
@@ -109,27 +111,36 @@ class MainFrame (wx.Frame):
         self.btnStart.Enabled = True 
 
     def __importData(self,event):
-        self.__resetCarguer(len(self.dictionary))
+        """
+        Read csv with words and load it to table
+        """
+        self.__resetgauge(len(self.dictionary))
         with open(self.filePath+'words.csv', 'w', newline='') as csvfile:
             spamwriter = csv.writer(csvfile, delimiter=';',
                                     quotechar='|', quoting=csv.QUOTE_MINIMAL)
             for i,value in enumerate(self.dictionary):
-                self.carguer.SetValue(i)
+                self.gauge.SetValue(i)
                 spamwriter.writerow([value[0],value[1]])
 
-    def __resetCarguer(self,max):
-        self.carguer.SetValue(0)
-        self.carguer.SetRange(max)
+    def __resetgauge(self,max):
+        """
+        reset loading bar
+        """
+        self.gauge.SetValue(0)
+        self.gauge.SetRange(max)
     
 
     def __countWords(self, event):
+        """
+        Load the pdf file and start counting words
+        """
         self.dataView.ClearGrid()
         pdf = self.__getFile(self.filePiker.GetPath())
         words =[]
 
-        self.carguer.SetRange(pdf.getNumPages())
+        self.gauge.SetRange(pdf.getNumPages())
         for num in range(pdf.getNumPages()):
-            self.carguer.SetValue(num)
+            self.gauge.SetValue(num)
             page    =   pdf.getPage(num)
             txt     =   self.normalizeText(page.extractText())
             words   +=  self.deleteEmptyWords(txt)
@@ -142,16 +153,22 @@ class MainFrame (wx.Frame):
             self.dataView.InsertRows(pos=i)
             self.dataView.SetCellValue(i,0,value[1])
             self.dataView.SetCellValue(i,1,str(value[0]))
-        self.carguer.SetValue(num+1)
+        self.gauge.SetValue(num+1)
         self.btnImport.Enable(True)
 	
     def normalizeText(self,txt):
         return re.compile(r'\W+', re.UNICODE).split(txt)
     
     def deleteEmptyWords(self,txt):
+        """
+        Remove invalid words
+        """
         return [w for w in txt if w not in self.emptyWord]
     
     def sortDictionary(self,dictionary):
+        """
+        Sort the dictionary of words descending
+        """
         aux = [(dictionary[key], key) for key in dictionary]
         aux.sort()
         aux.reverse()
@@ -159,6 +176,9 @@ class MainFrame (wx.Frame):
 
 
     def __getFile(self, path):
+        """
+        Load the pdf files
+        """
         try:
             binaryPDF = open(path, 'rb')  # 'rb' for read binary mode
             return PyPDF2.PdfFileReader(binaryPDF)
