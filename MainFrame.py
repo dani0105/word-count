@@ -1,24 +1,33 @@
-import wx
 import csv
-import wx.xrc
-import wx.grid
-import PyPDF2
 import re
 from collections import Counter
 
-class MainFrame (wx.Frame):
+import PyPDF2
+import wx
+import wx.grid
+import wx.xrc
+
+
+class MainFrame(wx.Frame):
 
     # Ignore this word from the text.
-    emptyWord = ["del", '', 'al', 'mi', 'me','de', 'la', 'le', 'a', 'una', 'une', 'u']
-    emptyWord += ['y', 'mis', 'que', 'en', 'sino','no', 'sus', 'ya', 'él', 'su', 'sí']
-    emptyWord += ['allí', 'así', 'con', 'e', 'es','las', 'los', 'o', 'por', 'se', 'un']
-    emptyWord += ['el', 'lo', 'nos', 'como', ' ','para','esos']
+    emptyWord = ["del", "", "al", "mi", "me", "de", "la", "le", "a", "una", "une", "u"]
+    emptyWord += ["y", "mis", "que", "en", "sino", "no", "sus", "ya", "él", "su", "sí"]
+    emptyWord += ["allí", "así", "con", "e", "es", "las", "los", "o", "por", "se", "un"]
+    emptyWord += ["el", "lo", "nos", "como", " ", "para", "esos"]
 
     filePath = "./import/"
 
     def __init__(self, parent):
-        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=wx.EmptyString, pos=wx.DefaultPosition, size=wx.Size(
-            600, 300), style=wx.DEFAULT_FRAME_STYLE | wx.TAB_TRAVERSAL)
+        wx.Frame.__init__(
+            self,
+            parent,
+            id=wx.ID_ANY,
+            title=wx.EmptyString,
+            pos=wx.DefaultPosition,
+            size=wx.Size(600, 300),
+            style=wx.DEFAULT_FRAME_STYLE | wx.TAB_TRAVERSAL,
+        )
         self.__iniComponents()
 
     def __iniComponents(self):
@@ -28,7 +37,8 @@ class MainFrame (wx.Frame):
         Container = wx.GridSizer(1, 2, 0, 0)
 
         self.dataView = wx.grid.Grid(
-            self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0)
+            self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 0
+        )
 
         # Grid
         self.dataView.CreateGrid(0, 2)
@@ -57,42 +67,57 @@ class MainFrame (wx.Frame):
         ContainerRight = wx.BoxSizer(wx.VERTICAL)
 
         self.lblTitle = wx.StaticText(
-            self, wx.ID_ANY, u"WordCount", wx.DefaultPosition, wx.DefaultSize, 0)
+            self, wx.ID_ANY, "WordCount", wx.DefaultPosition, wx.DefaultSize, 0
+        )
         self.lblTitle.Wrap(-1)
-        ContainerRight.Add(self.lblTitle, 0, wx.ALL |
-                           wx.ALIGN_CENTER_HORIZONTAL, 5)
+        ContainerRight.Add(self.lblTitle, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 5)
 
         self.lblFilePiker = wx.StaticText(
-            self, wx.ID_ANY, u"Seleccione el archivo", wx.DefaultPosition, wx.DefaultSize, 0)
+            self,
+            wx.ID_ANY,
+            "Seleccione el archivo",
+            wx.DefaultPosition,
+            wx.DefaultSize,
+            0,
+        )
         self.lblFilePiker.Wrap(-1)
         ContainerRight.Add(self.lblFilePiker, 0, wx.ALL, 5)
 
-        self.filePiker = wx.FilePickerCtrl(self, wx.ID_ANY, wx.EmptyString, u"Seleccione el archivo",
-                                           u"*.pdf", wx.DefaultPosition, wx.DefaultSize, wx.FLP_DEFAULT_STYLE)
+        self.filePiker = wx.FilePickerCtrl(
+            self,
+            wx.ID_ANY,
+            wx.EmptyString,
+            "Seleccione el archivo",
+            "*.pdf",
+            wx.DefaultPosition,
+            wx.DefaultSize,
+            wx.FLP_DEFAULT_STYLE,
+        )
         ContainerRight.Add(self.filePiker, 0, wx.ALL | wx.EXPAND, 5)
 
         self.gauge = wx.Gauge(
-            self, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL)
+            self, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL
+        )
         self.gauge.SetValue(0)
         ContainerRight.Add(self.gauge, 0, wx.ALL, 5)
 
         ##ContainerRight.AddSpacer( ( 0, 40), 0, wx.EXPAND, 5 )
 
         self.btnStart = wx.Button(
-            self, wx.ID_ANY, u"Contar", wx.DefaultPosition, wx.DefaultSize, 0)
+            self, wx.ID_ANY, "Contar", wx.DefaultPosition, wx.DefaultSize, 0
+        )
         self.btnStart.Enable(False)
 
-        ContainerRight.Add(
-            self.btnStart, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5)
+        ContainerRight.Add(self.btnStart, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 5)
 
-        #ContainerRight.AddSpacer( ( 0, 10), 0, wx.EXPAND, 5 )
+        # ContainerRight.AddSpacer( ( 0, 10), 0, wx.EXPAND, 5 )
 
         self.btnImport = wx.Button(
-            self, wx.ID_ANY, u"Importar", wx.DefaultPosition, wx.DefaultSize, 0)
+            self, wx.ID_ANY, "Importar", wx.DefaultPosition, wx.DefaultSize, 0
+        )
         self.btnImport.Enable(False)
 
-        ContainerRight.Add(self.btnImport, 0, wx.ALL |
-                           wx.ALIGN_CENTER_HORIZONTAL, 5)
+        ContainerRight.Add(self.btnImport, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 5)
 
         Container.Add(ContainerRight, 1, wx.EXPAND, 5)
 
@@ -108,27 +133,27 @@ class MainFrame (wx.Frame):
         self.btnImport.Bind(wx.EVT_BUTTON, self.__importData)
 
     def __enableButton(self, event):
-        self.btnStart.Enabled = True 
+        self.btnStart.Enabled = True
 
-    def __importData(self,event):
+    def __importData(self, event):
         """
         Read csv with words and load it to table
         """
         self.__resetgauge(len(self.dictionary))
-        with open(self.filePath+'words.csv', 'w', newline='') as csvfile:
-            spamwriter = csv.writer(csvfile, delimiter=';',
-                                    quotechar='|', quoting=csv.QUOTE_MINIMAL)
-            for i,value in enumerate(self.dictionary):
+        with open(self.filePath + "words.csv", "w", newline="") as csvfile:
+            spamwriter = csv.writer(
+                csvfile, delimiter=";", quotechar="|", quoting=csv.QUOTE_MINIMAL
+            )
+            for i, value in enumerate(self.dictionary):
                 self.gauge.SetValue(i)
-                spamwriter.writerow([value[0],value[1]])
+                spamwriter.writerow([value[0], value[1]])
 
-    def __resetgauge(self,max):
+    def __resetgauge(self, max):
         """
         reset loading bar
         """
         self.gauge.SetValue(0)
         self.gauge.SetRange(max)
-    
 
     def __countWords(self, event):
         """
@@ -136,38 +161,38 @@ class MainFrame (wx.Frame):
         """
         self.dataView.ClearGrid()
         pdf = self.__getFile(self.filePiker.GetPath())
-        words =[]
+        words = []
 
         self.gauge.SetRange(pdf.getNumPages())
         for num in range(pdf.getNumPages()):
             self.gauge.SetValue(num)
-            page    =   pdf.getPage(num)
-            txt     =   self.normalizeText(page.extractText())
-            words   +=  self.deleteEmptyWords(txt)
-        
+            page = pdf.getPage(num)
+            txt = self.normalizeText(page.extractText())
+            words += self.deleteEmptyWords(txt)
+
         self.dictionary = dict(Counter(words))
         self.dictionary = self.sortDictionary(self.dictionary)
 
-        if (self.dataView.GetNumberRows() > 0):
+        if self.dataView.GetNumberRows() > 0:
             self.dataView.DeleteRows(numRows=self.dataView.GetNumberRows())
 
-        for i,value in enumerate(self.dictionary):
+        for i, value in enumerate(self.dictionary):
             self.dataView.InsertRows(pos=i)
-            self.dataView.SetCellValue(i,0,value[1])
-            self.dataView.SetCellValue(i,1,str(value[0]))
-        self.gauge.SetValue(num+1)
+            self.dataView.SetCellValue(i, 0, value[1])
+            self.dataView.SetCellValue(i, 1, str(value[0]))
+        self.gauge.SetValue(num + 1)
         self.btnImport.Enable(True)
-	
-    def normalizeText(self,txt):
-        return re.compile(r'\W+', re.UNICODE).split(txt)
-    
-    def deleteEmptyWords(self,txt):
+
+    def normalizeText(self, txt):
+        return re.compile(r"\W+", re.UNICODE).split(txt)
+
+    def deleteEmptyWords(self, txt):
         """
         Remove invalid words
         """
         return [w for w in txt if w not in self.emptyWord]
-    
-    def sortDictionary(self,dictionary):
+
+    def sortDictionary(self, dictionary):
         """
         Sort the dictionary of words descending
         """
@@ -176,13 +201,12 @@ class MainFrame (wx.Frame):
         aux.reverse()
         return aux
 
-
     def __getFile(self, path):
         """
         Load the pdf files
         """
         try:
-            binaryPDF = open(path, 'rb')  # 'rb' for read binary mode
+            binaryPDF = open(path, "rb")  # 'rb' for read binary mode
             return PyPDF2.PdfFileReader(binaryPDF)
         except IOError as error:
             return None
