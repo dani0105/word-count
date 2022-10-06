@@ -148,6 +148,9 @@ class MainFrame (wx.Frame):
         self.dictionary = dict(Counter(words))
         self.dictionary = self.sortDictionary(self.dictionary)
 
+        if (self.dataView.GetNumberRows() > 0):
+            self.dataView.DeleteRows(numRows=self.dataView.GetNumberRows())
+
         for i,value in enumerate(self.dictionary):
             self.dataView.InsertRows(pos=i)
             self.dataView.SetCellValue(i,0,value[1])
