@@ -184,9 +184,6 @@ class MainFrame(wx.Frame):
         self.gauge.SetValue(num + 1)
         self.btnImport.Enable(True)
 
-    # def __get_stopwords(self, language):
-    #     return set(stopwords.words(language))
-
     def normalizeText(self, txt):
         return re.compile(r"\W+", re.UNICODE).split(txt)
 
