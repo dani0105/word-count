@@ -7,6 +7,9 @@ import wx
 import wx.grid
 import wx.xrc
 
+import nltk
+nltk.download('stopwords')
+from nltk.corpus import stopwords
 
 class MainFrame(wx.Frame):
 
@@ -182,6 +185,9 @@ class MainFrame(wx.Frame):
             self.dataView.SetCellValue(i, 1, str(value[0]))
         self.gauge.SetValue(num + 1)
         self.btnImport.Enable(True)
+
+    def __get_stopwords(self, language):
+        return set(stopwords.words(language))
 
     def normalizeText(self, txt):
         return re.compile(r"\W+", re.UNICODE).split(txt)
