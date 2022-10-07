@@ -8,18 +8,16 @@ import wx.grid
 import wx.xrc
 
 import nltk
-nltk.download('stopwords')
+nltk.download('stopwords', quiet=True)
 from nltk.corpus import stopwords
+
 
 class MainFrame(wx.Frame):
 
-    # Ignore this word from the text.
-    emptyWord = ["del", "", "al", "mi", "me", "de", "la", "le", "a", "una", "une", "u"]
-    emptyWord += ["y", "mis", "que", "en", "sino", "no", "sus", "ya", "él", "su", "sí"]
-    emptyWord += ["allí", "así", "con", "e", "es", "las", "los", "o", "por", "se", "un"]
-    emptyWord += ["el", "lo", "nos", "como", " ", "para", "esos"]
-
     filePath = "./import/"
+
+    # Ignore stopwords from the text. Default language is English for now.
+    emptyWord = set(stopwords.words('english'))
 
     def __init__(self, parent):
         wx.Frame.__init__(
@@ -186,8 +184,8 @@ class MainFrame(wx.Frame):
         self.gauge.SetValue(num + 1)
         self.btnImport.Enable(True)
 
-    def __get_stopwords(self, language):
-        return set(stopwords.words(language))
+    # def __get_stopwords(self, language):
+    #     return set(stopwords.words(language))
 
     def normalizeText(self, txt):
         return re.compile(r"\W+", re.UNICODE).split(txt)
@@ -196,7 +194,7 @@ class MainFrame(wx.Frame):
         """
         Remove invalid words
         """
-        return [w for w in txt if w not in self.emptyWord]
+        return [w for w in txt if w.lower() not in self.emptyWord]
 
     def sortDictionary(self, dictionary):
         """
