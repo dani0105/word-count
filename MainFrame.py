@@ -211,7 +211,7 @@ class MainFrame(wx.Frame):
         text = None
         
         match fileExtension:
-            case "pdf":
+            case ".pdf":
                 """
                 Load the pdf files
                 """
@@ -220,7 +220,7 @@ class MainFrame(wx.Frame):
                     text = PyPDF2.PdfFileReader(binaryPDF)
                 except (OSError, IOError) as error:
                     text = None
-            case "txt":
+            case ".txt":
                 """
                 Load text files
                 """
@@ -229,7 +229,7 @@ class MainFrame(wx.Frame):
                         text = f.read()
                 except (OSError, IOError) as error:
                     text = None
-            case "doc" | "docx":
+            case ".doc" | ".docx":
                 """
                 Load Microsoft Word files
                 """
