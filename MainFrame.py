@@ -210,42 +210,39 @@ class MainFrame(wx.Frame):
         fileExtension = pathlib.Path(path).suffix
         text = None
         
-        match fileExtension:
-            case ".pdf":
-                """
-                Load the pdf files
-                """
-                try:
-                    binaryPDF = open(path, "rb")  # 'rb' for read binary mode
-                    text = PyPDF2.PdfFileReader(binaryPDF)
-                except (OSError, IOError) as error:
-                    text = None
-            case ".txt":
-                """
-                Load text files
-                """
-                try:
-                    with open(path, 'r') as f:
-                        text = f.read()
-                except (OSError, IOError) as error:
-                    text = None
-            case ".doc" | ".docx":
-                """
-                Load Microsoft Word files
-                """
-                try:
-                    text = docx2txt.process(path)
-                except (OSError, IOError) as error:
-                    text = None
-            case _:
-                """
-                File is unsupported file format
-                """
+        if fileExtension == ".pdf":
+            """
+            Load the pdf files
+            """
+            try:
+                binaryPDF = open(path, "rb")  # 'rb' for read binary mode
+                text = PyPDF2.PdfFileReader(binaryPDF)
+            except (OSError, IOError) as error:
                 text = None
-        
+        elif fileExtension == ".txt":
+            """
+            Load text files
+            """
+            try:
+                with open(path, 'r') as f:
+                    text = f.read()
+            except (OSError, IOError) as error:
+                text = None
+        elif fileExtension == ".doc" | fileExtension == ".docx":
+            """
+            Load Microsoft Word files
+            """
+            try:
+                text = docx2txt.process(path)
+            except (OSError, IOError) as error:
+                text = None
+        else:
+            """
+            File is unsupported file format
+            """
+            text = None
+       
         return text
-        
-        
 
     def __del__(self):
         pass
