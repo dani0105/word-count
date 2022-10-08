@@ -1,4 +1,0 @@
-pre-commit==2.20.0
-PyPDF2==1.26.0
-wxPython==4.2.0
-docx2txt==0.8
