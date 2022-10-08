@@ -26,7 +26,7 @@ class MainFrame(wx.Frame):
             id=wx.ID_ANY,
             title=wx.EmptyString,
             pos=wx.DefaultPosition,
-            size=wx.Size(600, 300),
+            size=wx.Size(800, 300),
             style=wx.DEFAULT_FRAME_STYLE | wx.TAB_TRAVERSAL,
         )
         self.__iniComponents()
@@ -42,7 +42,7 @@ class MainFrame(wx.Frame):
         )
 
         # Grid
-        self.dataView.CreateGrid(0, 2)
+        self.dataView.CreateGrid(0, 3)
         self.dataView.EnableEditing(False)
         self.dataView.EnableGridLines(True)
         self.dataView.EnableDragGridSize(False)
@@ -51,10 +51,11 @@ class MainFrame(wx.Frame):
         # Columns
         self.dataView.EnableDragColMove(False)
         self.dataView.EnableDragColSize(True)
-        self.dataView.SetColLabelSize(30)
         self.dataView.SetColLabelAlignment(wx.ALIGN_CENTRE, wx.ALIGN_CENTRE)
+        self.dataView.SetColLabelSize(50)
         self.dataView.SetColLabelValue(0, "Palabra")
-        self.dataView.SetColLabelValue(1, "Cantidad")
+        self.dataView.SetColLabelValue(1, "Longitud\nde la\npalabra")
+        self.dataView.SetColLabelValue(2, "Cantidad")
 
         # Rows
         self.dataView.EnableDragRowSize(False)
@@ -180,7 +181,8 @@ class MainFrame(wx.Frame):
         for i, value in enumerate(self.dictionary):
             self.dataView.InsertRows(pos=i)
             self.dataView.SetCellValue(i, 0, value[1])
-            self.dataView.SetCellValue(i, 1, str(value[0]))
+            self.dataView.SetCellValue(i, 1, str(len(value[1])))
+            self.dataView.SetCellValue(i, 2, str(value[0]))
         self.gauge.SetValue(num + 1)
         self.btnImport.Enable(True)
 
