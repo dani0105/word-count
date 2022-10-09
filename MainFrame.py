@@ -30,6 +30,8 @@ class MainFrame(wx.Frame):
             style=wx.DEFAULT_FRAME_STYLE | wx.TAB_TRAVERSAL,
         )
         self.__iniComponents()
+        self.dictionary = {}
+        self.sortedReverse = True
 
     def __iniComponents(self):
         """
@@ -134,6 +136,24 @@ class MainFrame(wx.Frame):
 
         self.btnImport.Bind(wx.EVT_BUTTON, self.__importData)
 
+        self.dataView.Bind(wx.grid.EVT_GRID_COL_SORT, self.__sortData)
+
+    def __sortData(self, event):
+        col = event.GetCol()
+        print(self.dictionary)
+        self.sortedReverse = False if self.sortedReverse else True
+        self.dictionary.sort(key = lambda a: a[col], reverse = self.sortedReverse)
+
+        self.dataView.ClearGrid()
+        if self.dataView.GetNumberRows() > 0:
+            self.dataView.DeleteRows(numRows=self.dataView.GetNumberRows())
+
+        for i, value in enumerate(self.dictionary):
+            self.dataView.InsertRows(pos=i)
+            self.dataView.SetCellValue(i, 0, value[1])
+            self.dataView.SetCellValue(i, 1, str(value[2]))
+            self.dataView.SetCellValue(i, 2, str(value[0]))
+
     def __enableButton(self, event):
         self.btnStart.Enabled = True
 
@@ -181,7 +201,7 @@ class MainFrame(wx.Frame):
         for i, value in enumerate(self.dictionary):
             self.dataView.InsertRows(pos=i)
             self.dataView.SetCellValue(i, 0, value[1])
-            self.dataView.SetCellValue(i, 1, str(len(value[1])))
+            self.dataView.SetCellValue(i, 1, str(value[2]))
             self.dataView.SetCellValue(i, 2, str(value[0]))
         self.gauge.SetValue(num + 1)
         self.btnImport.Enable(True)
@@ -199,7 +219,7 @@ class MainFrame(wx.Frame):
         """
         Sort the dictionary of words descending
         """
-        aux = [(dictionary[key], key) for key in dictionary]
+        aux = [(dictionary[key], key, len(key)) for key in dictionary]
         aux.sort()
         aux.reverse()
         return aux
