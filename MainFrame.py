@@ -163,16 +163,13 @@ class MainFrame(wx.Frame):
         Load the pdf file and start counting words
         """
         self.dataView.ClearGrid()
-        pdf = self.__getFile(self.filePiker.GetPath())
+
+        rawTxt = self.__getTextFromFile(self.filePiker.GetPath())
         words = []
 
-        self.gauge.SetRange(pdf.getNumPages())
-        for num in range(pdf.getNumPages()):
-            self.gauge.SetValue(num)
-            page = pdf.getPage(num)
-            txt = self.normalizeText(page.extractText())
-            words += self.deleteEmptyWords(txt)
-
+        txt = self.normalizeText(rawTxt)
+        words = self.deleteEmptyWords(txt)
+        
         self.dictionary = dict(Counter(words))
         self.dictionary = self.sortDictionary(self.dictionary)
 
@@ -204,7 +201,7 @@ class MainFrame(wx.Frame):
         aux.reverse()
         return aux
 
-    def __getFile(self, path):
+    def __getTextFromFile(self, path):
         """
         Check file type
         """
@@ -217,7 +214,12 @@ class MainFrame(wx.Frame):
             """
             try:
                 binaryPDF = open(path, "rb")  # 'rb' for read binary mode
-                text = PyPDF2.PdfFileReader(binaryPDF)
+                pdf = PyPDF2.PdfFileReader(binaryPDF)
+                self.gauge.SetRange(pdf.getNumPages())
+                for num in range(pdf.getNumPages()):
+                    self.gauge.SetValue(num)
+                    page = pdf.getPage(num)
+                    text += page.extractText()
             except (OSError, IOError) as error:
                 text = None
         elif fileExtension == ".txt":
@@ -229,7 +231,7 @@ class MainFrame(wx.Frame):
                     text = f.read()
             except (OSError, IOError) as error:
                 text = None
-        elif fileExtension == ".doc" | fileExtension == ".docx":
+        elif fileExtension == ".doc" or fileExtension == ".docx":
             """
             Load Microsoft Word files
             """
@@ -247,8 +249,6 @@ class MainFrame(wx.Frame):
 
     def __del__(self):
         pass
-
-
 app = wx.App()
 frame = MainFrame(None)
 frame.Show()
