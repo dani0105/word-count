@@ -91,7 +91,7 @@ class MainFrame(wx.Frame):
             wx.ID_ANY,
             wx.EmptyString,
             "Seleccione el archivo",
-            "*.pdf",
+            "*.pdf;*.doc*;*.txt",
             wx.DefaultPosition,
             wx.DefaultSize,
             wx.FLP_DEFAULT_STYLE,
@@ -162,6 +162,7 @@ class MainFrame(wx.Frame):
         """
         Load the pdf file and start counting words
         """
+
         self.dataView.ClearGrid()
 
         rawTxt = self.__getTextFromFile(self.filePiker.GetPath())
@@ -180,7 +181,7 @@ class MainFrame(wx.Frame):
             self.dataView.InsertRows(pos=i)
             self.dataView.SetCellValue(i, 0, value[1])
             self.dataView.SetCellValue(i, 1, str(value[0]))
-        self.gauge.SetValue(num + 1)
+            self.gauge.SetValue(i)
         self.btnImport.Enable(True)
 
     def normalizeText(self, txt):
@@ -206,7 +207,7 @@ class MainFrame(wx.Frame):
         Check file type
         """
         fileExtension = pathlib.Path(path).suffix
-        text = None
+        text = ""
         
         if fileExtension == ".pdf":
             """
