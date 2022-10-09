@@ -1,8 +1,10 @@
 import csv
 import re
 from collections import Counter
+import pathlib
 
 import PyPDF2
+import docx2txt
 import wx
 import wx.grid
 import wx.xrc
@@ -161,16 +163,13 @@ class MainFrame(wx.Frame):
         Load the pdf file and start counting words
         """
         self.dataView.ClearGrid()
-        pdf = self.__getFile(self.filePiker.GetPath())
+
+        rawTxt = self.__getTextFromFile(self.filePiker.GetPath())
         words = []
 
-        self.gauge.SetRange(pdf.getNumPages())
-        for num in range(pdf.getNumPages()):
-            self.gauge.SetValue(num)
-            page = pdf.getPage(num)
-            txt = self.normalizeText(page.extractText())
-            words += self.deleteEmptyWords(txt)
-
+        txt = self.normalizeText(rawTxt)
+        words = self.deleteEmptyWords(txt)
+        
         self.dictionary = dict(Counter(words))
         self.dictionary = self.sortDictionary(self.dictionary)
 
@@ -202,20 +201,54 @@ class MainFrame(wx.Frame):
         aux.reverse()
         return aux
 
-    def __getFile(self, path):
+    def __getTextFromFile(self, path):
         """
-        Load the pdf files
+        Check file type
         """
-        try:
-            binaryPDF = open(path, "rb")  # 'rb' for read binary mode
-            return PyPDF2.PdfFileReader(binaryPDF)
-        except IOError as error:
-            return None
+        fileExtension = pathlib.Path(path).suffix
+        text = None
+        
+        if fileExtension == ".pdf":
+            """
+            Load the pdf files
+            """
+            try:
+                binaryPDF = open(path, "rb")  # 'rb' for read binary mode
+                pdf = PyPDF2.PdfFileReader(binaryPDF)
+                self.gauge.SetRange(pdf.getNumPages())
+                for num in range(pdf.getNumPages()):
+                    self.gauge.SetValue(num)
+                    page = pdf.getPage(num)
+                    text += page.extractText()
+            except (OSError, IOError) as error:
+                text = None
+        elif fileExtension == ".txt":
+            """
+            Load text files
+            """
+            try:
+                with open(path, 'r') as f:
+                    text = f.read()
+            except (OSError, IOError) as error:
+                text = None
+        elif fileExtension == ".doc" or fileExtension == ".docx":
+            """
+            Load Microsoft Word files
+            """
+            try:
+                text = docx2txt.process(path)
+            except (OSError, IOError) as error:
+                text = None
+        else:
+            """
+            File is unsupported file format
+            """
+            text = None
+       
+        return text
 
     def __del__(self):
         pass
-
-
 app = wx.App()
 frame = MainFrame(None)
 frame.Show()
