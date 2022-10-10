@@ -1,8 +1,10 @@
 import csv
 import re
 from collections import Counter
+import pathlib
 
 import PyPDF2
+import docx2txt
 import wx
 import wx.grid
 import wx.xrc
@@ -26,7 +28,7 @@ class MainFrame(wx.Frame):
             id=wx.ID_ANY,
             title=wx.EmptyString,
             pos=wx.DefaultPosition,
-            size=wx.Size(800, 300),
+            size=wx.Size(710, 300),
             style=wx.DEFAULT_FRAME_STYLE | wx.TAB_TRAVERSAL,
         )
         self.__iniComponents()
@@ -90,7 +92,7 @@ class MainFrame(wx.Frame):
             wx.ID_ANY,
             wx.EmptyString,
             "Seleccione el archivo",
-            "*.pdf",
+            "*.pdf;*.doc*;*.txt",
             wx.DefaultPosition,
             wx.DefaultSize,
             wx.FLP_DEFAULT_STYLE,
@@ -98,7 +100,7 @@ class MainFrame(wx.Frame):
         ContainerRight.Add(self.filePiker, 0, wx.ALL | wx.EXPAND, 5)
 
         self.gauge = wx.Gauge(
-            self, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL
+            self, wx.ID_ANY, 100, wx.DefaultPosition, (340, 15), wx.GA_HORIZONTAL
         )
         self.gauge.SetValue(0)
         ContainerRight.Add(self.gauge, 0, wx.ALL, 5)
@@ -148,7 +150,7 @@ class MainFrame(wx.Frame):
             )
             for i, value in enumerate(self.dictionary):
                 self.gauge.SetValue(i)
-                spamwriter.writerow([value[0], value[1]])
+                spamwriter.writerow([value[0], value[2], value[1]])
 
     def __resetgauge(self, max):
         """
@@ -161,29 +163,30 @@ class MainFrame(wx.Frame):
         """
         Load the pdf file and start counting words
         """
+
         self.dataView.ClearGrid()
-        pdf = self.__getFile(self.filePiker.GetPath())
+
+        rawTxt = self.__getTextFromFile(self.filePiker.GetPath())
         words = []
 
-        self.gauge.SetRange(pdf.getNumPages())
-        for num in range(pdf.getNumPages()):
-            self.gauge.SetValue(num)
-            page = pdf.getPage(num)
-            txt = self.normalizeText(page.extractText())
-            words += self.deleteEmptyWords(txt)
-
+        txt = self.normalizeText(rawTxt)
+        words = self.deleteEmptyWords(txt)
+        
         self.dictionary = dict(Counter(words))
         self.dictionary = self.sortDictionary(self.dictionary)
 
         if self.dataView.GetNumberRows() > 0:
             self.dataView.DeleteRows(numRows=self.dataView.GetNumberRows())
 
+        self.gauge.SetRange(len(self.dictionary))
         for i, value in enumerate(self.dictionary):
             self.dataView.InsertRows(pos=i)
             self.dataView.SetCellValue(i, 0, value[1])
-            self.dataView.SetCellValue(i, 1, str(len(value[1])))
+            self.dataView.SetCellValue(i, 1, str(value[2]))
             self.dataView.SetCellValue(i, 2, str(value[0]))
-        self.gauge.SetValue(num + 1)
+            self.gauge.SetValue(i)
+
+        self.gauge.SetValue(len(self.dictionary)+1)
         self.btnImport.Enable(True)
 
     def normalizeText(self, txt):
@@ -199,25 +202,59 @@ class MainFrame(wx.Frame):
         """
         Sort the dictionary of words descending
         """
-        aux = [(dictionary[key], key) for key in dictionary]
+        aux = [(dictionary[key], key, len(key)) for key in dictionary]
         aux.sort()
         aux.reverse()
         return aux
 
-    def __getFile(self, path):
+    def __getTextFromFile(self, path):
         """
-        Load the pdf files
+        Check file type
         """
-        try:
-            binaryPDF = open(path, "rb")  # 'rb' for read binary mode
-            return PyPDF2.PdfFileReader(binaryPDF)
-        except IOError as error:
-            return None
+        fileExtension = pathlib.Path(path).suffix
+        text = ""
+        
+        if fileExtension == ".pdf":
+            """
+            Load the pdf files
+            """
+            try:
+                binaryPDF = open(path, "rb")  # 'rb' for read binary mode
+                pdf = PyPDF2.PdfFileReader(binaryPDF)
+                self.gauge.SetRange(pdf.getNumPages())
+                for num in range(pdf.getNumPages()):
+                    self.gauge.SetValue(num)
+                    page = pdf.getPage(num)
+                    text += page.extractText()
+            except (OSError, IOError) as error:
+                text = None
+        elif fileExtension == ".txt":
+            """
+            Load text files
+            """
+            try:
+                with open(path, 'r') as f:
+                    text = f.read()
+            except (OSError, IOError) as error:
+                text = None
+        elif fileExtension == ".doc" or fileExtension == ".docx":
+            """
+            Load Microsoft Word files
+            """
+            try:
+                text = docx2txt.process(path)
+            except (OSError, IOError) as error:
+                text = None
+        else:
+            """
+            File is unsupported file format
+            """
+            text = None
+       
+        return text
 
     def __del__(self):
         pass
-
-
 app = wx.App()
 frame = MainFrame(None)
 frame.Show()
