@@ -20,8 +20,8 @@ class MainFrame(wx.Frame):
 
     filePath = "./import/"
 
-    # Ignore stopwords from the text. Default language is English for now.
-    emptyWord = set(stopwords.words('english'))
+    # Ignore stopwords from the text. Default language is Spanish for now.
+    emptyWord = set(stopwords.words('spanish'))
 
     def __init__(self, parent):
         wx.Frame.__init__(
@@ -208,18 +208,19 @@ class MainFrame(wx.Frame):
         """
         Change language
         """
+        self.dataView.InsertRows(pos=0)
+        self.dataView.DeleteRows(pos=0)
         currentLang = self.languageCombo.GetValue()
         currentLang = currentLang.lower()
         self.__update_stopwords(currentLang)
         if currentLang == 'english':
-            print(currentLang)
             self.btnStart.SetLabel('Count')
             self.btnImport.SetLabel('To import')
             self.dataView.SetColLabelValue(0, "Word")
             self.dataView.SetColLabelValue(1, "Length\nof\nword")
             self.dataView.SetColLabelValue(2, "Quantity")
-            self.lblDropdown.SetLabel("Select Language")
-            self.lblDropdown.SetLabel("Select Language")
+            self.lblDropdown.SetLabel("Select the Language")
+            self.lblFilePiker.SetLabel("Select the file")
         elif currentLang == 'spanish':
             self.btnStart.SetLabel('Contar')
             self.btnImport.SetLabel('Importar')
@@ -227,7 +228,7 @@ class MainFrame(wx.Frame):
             self.dataView.SetColLabelValue(1, "Longitud\nde la\npalabra")
             self.dataView.SetColLabelValue(2, "Cantidad")
             self.lblDropdown.SetLabel("Seleccione el idioma")
-            self.lblDropdown.SetLabel("Seleccione el idioma")
+            self.lblFilePiker.SetLabel("Seleccione el archivo")
         else:
             pass
 
