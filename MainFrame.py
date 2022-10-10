@@ -1,7 +1,9 @@
 import csv
+from random import choices
 import re
 from collections import Counter
 import pathlib
+from turtle import update
 
 import PyPDF2
 import docx2txt
@@ -99,6 +101,32 @@ class MainFrame(wx.Frame):
         )
         ContainerRight.Add(self.filePiker, 0, wx.ALL | wx.EXPAND, 5)
 
+        # Dropdown for language selection
+        self.lblDropdown = wx.StaticText(
+            self,
+            wx.ID_ANY,
+            "Seleccione el idioma",
+            wx.DefaultPosition,
+            wx.DefaultSize,
+            0,
+        )
+        self.lblDropdown.Wrap(-1)
+        ContainerRight.Add(self.lblDropdown, 0, wx.ALL, 5)
+
+        languages = ['Spanish', 'English']
+        self.languageCombo = wx.ComboBox(self,  wx.ID_ANY, size=(340, 30), choices = languages, style=wx.CB_READONLY)
+
+        ContainerRight.Add(self.languageCombo, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 5)
+
+        Container.Add(ContainerRight, 1, wx.EXPAND, 5)
+
+        self.SetSizer(Container)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.languageCombo.SetValue('Spanish')
+
         self.gauge = wx.Gauge(
             self, wx.ID_ANY, 100, wx.DefaultPosition, (340, 15), wx.GA_HORIZONTAL
         )
@@ -123,18 +151,12 @@ class MainFrame(wx.Frame):
 
         ContainerRight.Add(self.btnImport, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 5)
 
-        Container.Add(ContainerRight, 1, wx.EXPAND, 5)
-
-        self.SetSizer(Container)
-        self.Layout()
-
-        self.Centre(wx.BOTH)
-
         # Connect Events
         self.filePiker.Bind(wx.EVT_FILEPICKER_CHANGED, self.__enableButton)
         self.btnStart.Bind(wx.EVT_BUTTON, self.__countWords)
 
         self.btnImport.Bind(wx.EVT_BUTTON, self.__importData)
+        self.languageCombo.Bind(wx.EVT_COMBOBOX, self.__change_language)
 
     def __enableButton(self, event):
         self.btnStart.Enabled = True
@@ -158,6 +180,37 @@ class MainFrame(wx.Frame):
         """
         self.gauge.SetValue(0)
         self.gauge.SetRange(max)
+
+    def __update_stopwords(self, language):
+        self.emptyWord = set(stopwords.words(language))
+
+    def __change_language(self, event):
+        """
+        Change language
+        """
+        currentLang = self.languageCombo.GetValue()
+        currentLang = currentLang.lower()
+        self.__update_stopwords(currentLang)
+        if currentLang == 'english':
+            print(currentLang)
+            self.btnStart.SetLabel('Count')
+            self.btnImport.SetLabel('To import')
+            self.dataView.SetColLabelValue(0, "Word")
+            self.dataView.SetColLabelValue(1, "Length\nof\nword")
+            self.dataView.SetColLabelValue(2, "Quantity")
+            self.lblDropdown.SetLabel("Select Language")
+            self.lblDropdown.SetLabel("Select Language")
+        elif currentLang == 'spanish':
+            self.btnStart.SetLabel('Contar')
+            self.btnImport.SetLabel('Importar')
+            self.dataView.SetColLabelValue(0, "Palabra")
+            self.dataView.SetColLabelValue(1, "Longitud\nde la\npalabra")
+            self.dataView.SetColLabelValue(2, "Cantidad")
+            self.lblDropdown.SetLabel("Seleccione el idioma")
+            self.lblDropdown.SetLabel("Seleccione el idioma")
+        else:
+            pass
+
 
     def __countWords(self, event):
         """
