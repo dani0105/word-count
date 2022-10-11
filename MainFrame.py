@@ -1,7 +1,9 @@
 import csv
+from random import choices
 import re
 from collections import Counter
 import pathlib
+from turtle import update
 
 import PyPDF2
 import docx2txt
@@ -18,8 +20,8 @@ class MainFrame(wx.Frame):
 
     filePath = "./import/"
 
-    # Ignore stopwords from the text. Default language is English for now.
-    emptyWord = set(stopwords.words('english'))
+    # Ignore stopwords from the text. Default language is Spanish for now.
+    emptyWord = set(stopwords.words('spanish'))
 
     def __init__(self, parent):
         wx.Frame.__init__(
@@ -28,10 +30,12 @@ class MainFrame(wx.Frame):
             id=wx.ID_ANY,
             title=wx.EmptyString,
             pos=wx.DefaultPosition,
-            size=wx.Size(600, 300),
+            size=wx.Size(710, 300),
             style=wx.DEFAULT_FRAME_STYLE | wx.TAB_TRAVERSAL,
         )
         self.__iniComponents()
+        self.dictionary = {}
+        self.sortedReverse = True
 
     def __iniComponents(self):
         """
@@ -44,7 +48,7 @@ class MainFrame(wx.Frame):
         )
 
         # Grid
-        self.dataView.CreateGrid(0, 2)
+        self.dataView.CreateGrid(0, 3)
         self.dataView.EnableEditing(False)
         self.dataView.EnableGridLines(True)
         self.dataView.EnableDragGridSize(False)
@@ -53,10 +57,11 @@ class MainFrame(wx.Frame):
         # Columns
         self.dataView.EnableDragColMove(False)
         self.dataView.EnableDragColSize(True)
-        self.dataView.SetColLabelSize(30)
         self.dataView.SetColLabelAlignment(wx.ALIGN_CENTRE, wx.ALIGN_CENTRE)
+        self.dataView.SetColLabelSize(50)
         self.dataView.SetColLabelValue(0, "Palabra")
-        self.dataView.SetColLabelValue(1, "Cantidad")
+        self.dataView.SetColLabelValue(1, "Longitud\nde la\npalabra")
+        self.dataView.SetColLabelValue(2, "Cantidad")
 
         # Rows
         self.dataView.EnableDragRowSize(False)
@@ -98,8 +103,34 @@ class MainFrame(wx.Frame):
         )
         ContainerRight.Add(self.filePiker, 0, wx.ALL | wx.EXPAND, 5)
 
+        # Dropdown for language selection
+        self.lblDropdown = wx.StaticText(
+            self,
+            wx.ID_ANY,
+            "Seleccione el idioma",
+            wx.DefaultPosition,
+            wx.DefaultSize,
+            0,
+        )
+        self.lblDropdown.Wrap(-1)
+        ContainerRight.Add(self.lblDropdown, 0, wx.ALL, 5)
+
+        languages = ['Spanish', 'English']
+        self.languageCombo = wx.ComboBox(self,  wx.ID_ANY, size=(340, 30), choices = languages, style=wx.CB_READONLY)
+
+        ContainerRight.Add(self.languageCombo, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 5)
+
+        Container.Add(ContainerRight, 1, wx.EXPAND, 5)
+
+        self.SetSizer(Container)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
+
+        self.languageCombo.SetValue('Spanish')
+
         self.gauge = wx.Gauge(
-            self, wx.ID_ANY, 100, wx.DefaultPosition, wx.DefaultSize, wx.GA_HORIZONTAL
+            self, wx.ID_ANY, 100, wx.DefaultPosition, (340, 15), wx.GA_HORIZONTAL
         )
         self.gauge.SetValue(0)
         ContainerRight.Add(self.gauge, 0, wx.ALL, 5)
@@ -122,18 +153,30 @@ class MainFrame(wx.Frame):
 
         ContainerRight.Add(self.btnImport, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 5)
 
-        Container.Add(ContainerRight, 1, wx.EXPAND, 5)
-
-        self.SetSizer(Container)
-        self.Layout()
-
-        self.Centre(wx.BOTH)
-
         # Connect Events
         self.filePiker.Bind(wx.EVT_FILEPICKER_CHANGED, self.__enableButton)
         self.btnStart.Bind(wx.EVT_BUTTON, self.__countWords)
 
         self.btnImport.Bind(wx.EVT_BUTTON, self.__importData)
+        self.languageCombo.Bind(wx.EVT_COMBOBOX, self.__change_language)
+
+        self.dataView.Bind(wx.grid.EVT_GRID_COL_SORT, self.__sortData)
+
+    def __sortData(self, event):
+        col = event.GetCol()
+        print(self.dictionary)
+        self.sortedReverse = False if self.sortedReverse else True
+        self.dictionary.sort(key = lambda a: a[col], reverse = self.sortedReverse)
+
+        self.dataView.ClearGrid()
+        if self.dataView.GetNumberRows() > 0:
+            self.dataView.DeleteRows(numRows=self.dataView.GetNumberRows())
+
+        for i, value in enumerate(self.dictionary):
+            self.dataView.InsertRows(pos=i)
+            self.dataView.SetCellValue(i, 0, value[1])
+            self.dataView.SetCellValue(i, 1, str(value[2]))
+            self.dataView.SetCellValue(i, 2, str(value[0]))
 
     def __enableButton(self, event):
         self.btnStart.Enabled = True
@@ -149,7 +192,7 @@ class MainFrame(wx.Frame):
             )
             for i, value in enumerate(self.dictionary):
                 self.gauge.SetValue(i)
-                spamwriter.writerow([value[0], value[1]])
+                spamwriter.writerow([value[0], value[2], value[1]])
 
     def __resetgauge(self, max):
         """
@@ -157,6 +200,38 @@ class MainFrame(wx.Frame):
         """
         self.gauge.SetValue(0)
         self.gauge.SetRange(max)
+
+    def __update_stopwords(self, language):
+        self.emptyWord = set(stopwords.words(language))
+
+    def __change_language(self, event):
+        """
+        Change language
+        """
+        self.dataView.InsertRows(pos=0)
+        self.dataView.DeleteRows(pos=0)
+        currentLang = self.languageCombo.GetValue()
+        currentLang = currentLang.lower()
+        self.__update_stopwords(currentLang)
+        if currentLang == 'english':
+            self.btnStart.SetLabel('Count')
+            self.btnImport.SetLabel('To import')
+            self.dataView.SetColLabelValue(0, "Word")
+            self.dataView.SetColLabelValue(1, "Length\nof\nword")
+            self.dataView.SetColLabelValue(2, "Quantity")
+            self.lblDropdown.SetLabel("Select the Language")
+            self.lblFilePiker.SetLabel("Select the file")
+        elif currentLang == 'spanish':
+            self.btnStart.SetLabel('Contar')
+            self.btnImport.SetLabel('Importar')
+            self.dataView.SetColLabelValue(0, "Palabra")
+            self.dataView.SetColLabelValue(1, "Longitud\nde la\npalabra")
+            self.dataView.SetColLabelValue(2, "Cantidad")
+            self.lblDropdown.SetLabel("Seleccione el idioma")
+            self.lblFilePiker.SetLabel("Seleccione el archivo")
+        else:
+            pass
+
 
     def __countWords(self, event):
         """
@@ -177,11 +252,15 @@ class MainFrame(wx.Frame):
         if self.dataView.GetNumberRows() > 0:
             self.dataView.DeleteRows(numRows=self.dataView.GetNumberRows())
 
+        self.gauge.SetRange(len(self.dictionary))
         for i, value in enumerate(self.dictionary):
             self.dataView.InsertRows(pos=i)
             self.dataView.SetCellValue(i, 0, value[1])
-            self.dataView.SetCellValue(i, 1, str(value[0]))
+            self.dataView.SetCellValue(i, 1, str(value[2]))
+            self.dataView.SetCellValue(i, 2, str(value[0]))
             self.gauge.SetValue(i)
+
+        self.gauge.SetValue(len(self.dictionary)+1)
         self.btnImport.Enable(True)
 
     def normalizeText(self, txt):
@@ -197,7 +276,7 @@ class MainFrame(wx.Frame):
         """
         Sort the dictionary of words descending
         """
-        aux = [(dictionary[key], key) for key in dictionary]
+        aux = [(dictionary[key], key, len(key)) for key in dictionary]
         aux.sort()
         aux.reverse()
         return aux
